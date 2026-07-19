@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/ingest-us",
+      "schedule": "0 21 * * 1-5"
+    },
+    {
+      "path": "/api/cron/ingest-psx",
+      "schedule": "30 11 * * 1-5"
+    },
+    {
+      "path": "/api/cron/snapshot-portfolios",
+      "schedule": "30 21 * * 1-5"
+    }
+  ]
+}
