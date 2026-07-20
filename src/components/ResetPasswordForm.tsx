@@ -12,6 +12,20 @@ const INPUT_CLASS =
 
 const INVALID_LINK_MESSAGE = "This reset link is invalid or has expired.";
 
+const CLOCK_SKEW_MESSAGE =
+  "Your device's clock looks incorrect, which is blocking sign-in. Check your date & time settings (set them to update automatically), then reload this page.";
+
+/**
+ * Supabase rejects a token whose "issued at" claim looks like it's in the
+ * future — which happens whenever the verifying device's own clock is
+ * running behind real time, not because anything is wrong with the link
+ * itself. Recognizable by message rather than an error code, since
+ * supabase-js doesn't expose a dedicated type for it.
+ */
+function isClockSkewError(message: string): boolean {
+  return /issued (at|in the) future/i.test(message);
+}
+
 /**
  * Supabase's password-recovery email links carry the session as an implicit
  * grant — access/refresh tokens in the URL hash fragment, never sent to the
@@ -22,7 +36,9 @@ const INVALID_LINK_MESSAGE = "This reset link is invalid or has expired.";
  */
 export function ResetPasswordForm() {
   const router = useRouter();
-  const [status, setStatus] = useState<"verifying" | "ready" | "invalid">("verifying");
+  const [status, setStatus] = useState<"verifying" | "ready" | "invalid" | "clock-skew">(
+    "verifying",
+  );
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -48,7 +64,7 @@ export function ResetPasswordForm() {
       });
 
       if (sessionError) {
-        setStatus("invalid");
+        setStatus(isClockSkewError(sessionError.message) ? "clock-skew" : "invalid");
         return;
       }
       // Clear tokens from the address bar now that the session is set.
@@ -69,11 +85,17 @@ export function ResetPasswordForm() {
 
     setPending(false);
     if (updateError) {
-      setError(updateError.message);
+      setError(
+        isClockSkewError(updateError.message) ? CLOCK_SKEW_MESSAGE : updateError.message,
+      );
       return;
     }
 
     router.push("/portfolio");
+  }
+
+  if (status === "clock-skew") {
+    return <p className="text-sm text-red-600 dark:text-red-400">{CLOCK_SKEW_MESSAGE}</p>;
   }
 
   if (status === "invalid") {

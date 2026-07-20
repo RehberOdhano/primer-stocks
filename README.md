@@ -1,4 +1,4 @@
-# Sarmaya
+# Primer Stocks
 
 Investment education app — stock data and paper trading, taught in context.
 See `CLAUDE.md` for product scope and the locked architecture.

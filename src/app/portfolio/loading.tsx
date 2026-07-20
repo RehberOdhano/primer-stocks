@@ -35,6 +35,19 @@ export default function Loading() {
         <SkeletonBar className="h-6 w-24" />
         <SkeletonTable rows={4} />
       </div>
+
+      <div className="flex flex-col gap-3">
+        <SkeletonBar className="h-6 w-32" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <SkeletonBar className="h-32 w-full" />
+          <SkeletonBar className="h-32 w-full" />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <SkeletonBar className="h-6 w-24" />
+        <SkeletonTable rows={4} />
+      </div>
     </main>
   );
 }

@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sarmaya",
+  title: "Primer Stocks",
   description:
     "Learn to invest by doing — stock data and paper trading, taught in context.",
 };
@@ -45,7 +45,7 @@ export default async function RootLayout({
         <nav className="border-b border-zinc-200 dark:border-zinc-800">
           <div className="mx-auto flex max-w-7xl items-center gap-6 px-6 py-3">
             <Link href="/" className="font-semibold">
-              Sarmaya
+              Primer Stocks
             </Link>
             <Link href="/compare" className={NAV_LINK_CLASS}>
               Compare

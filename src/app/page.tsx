@@ -32,6 +32,20 @@ const FALLBACK_TERM: Term = {
   explainer: "We don't have a write-up for this yet.",
 };
 
+/**
+ * US and PSX ingestion run on separate schedules (see vercel.json), so one
+ * market's data can lag the other's — a single shared "as of" date would
+ * misrepresent whichever market is stale. Takes the max across the given
+ * list rather than assuming every ticker in it ingested on the same run.
+ */
+function latestSnapshotDate(stocks: StockListing[]): string | undefined {
+  return stocks.reduce<string | undefined>(
+    (latest, stock) =>
+      latest == null || stock.snapshotDate > latest ? stock.snapshotDate : latest,
+    undefined,
+  );
+}
+
 function HeaderTerm({ label, term }: { label: string; term: Term }) {
   return (
     <TermExplainer
@@ -192,7 +206,7 @@ export default async function Home() {
       <header>
         <h1 className="text-3xl font-semibold tracking-tight">Markets</h1>
         <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-          Delayed prices as of {stocks[0]?.snapshotDate}.
+          Delayed prices — see each market below for its last update.
         </p>
       </header>
 
@@ -217,14 +231,24 @@ export default async function Home() {
 
       {usStocks.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">US Tech</h2>
+          <div>
+            <h2 className="text-lg font-semibold">US Tech</h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              As of {latestSnapshotDate(usStocks)}
+            </p>
+          </div>
           <StockTable stocks={usStocks} terms={terms} />
         </section>
       )}
 
       {psxStocks.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">Pakistan Stock Exchange</h2>
+          <div>
+            <h2 className="text-lg font-semibold">Pakistan Stock Exchange</h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              As of {latestSnapshotDate(psxStocks)}
+            </p>
+          </div>
           <StockTable stocks={psxStocks} terms={terms} />
         </section>
       )}

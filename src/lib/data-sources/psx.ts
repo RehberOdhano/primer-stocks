@@ -8,7 +8,8 @@ const PSX_BASE_URL = "https://dps.psx.com.pk";
 // PSX's own site works without one via server-side fetch, but a realistic
 // User-Agent is a defensive measure against basic bot filtering.
 const REQUEST_HEADERS = {
-  "User-Agent": "Mozilla/5.0 (compatible; SarmayaEducationBot/1.0; +https://github.com/)",
+  "User-Agent":
+    "Mozilla/5.0 (compatible; PrimerStocksEducationBot/1.0; +https://github.com/)",
 };
 
 const eodResponseSchema = z.object({

@@ -1,9 +1,9 @@
-# Sarmaya
+# Primer Stocks
 
 Investment education app. The core problem it solves: most people don't understand
 stocks well enough to invest with confidence, and existing tools either just show
 data (Yahoo Finance, TradingView) or just teach theory (Investopedia, Zerodha
-Varsity) — never both together, in context. Sarmaya teaches through contextual
+Varsity) — never both together, in context. Primer Stocks teaches through contextual
 explainers plus a paper-trading simulator, so users get consequences without
 financial risk.
 
@@ -21,12 +21,16 @@ integration, no exchanges beyond US tech + PSX, no social/community features.
 
 ## Core features
 
-1. Stock listing — price, daily change, P/E, market cap, 52-week range (delayed
-   data is fine).
+1. Stock listing — price, daily change, P/E, EPS, dividend yield, market cap,
+   volume, 52-week range (delayed data is fine), plus a per-stock detail page
+   with price history.
 2. Contextual education — inline explainers triggered by an unfamiliar term
    (tap) or a significant price move, not a separate glossary/course section.
-3. Paper trading simulator — fake starting capital, buy/sell at real (delayed)
-   prices, portfolio tracking over time. This is the primary learning
+3. Paper trading simulator — fake starting capital in two separate pools
+   (USD/PKR, no fake FX conversion between them), buy/sell at real (delayed)
+   prices, portfolio tracking over time with a performance chart, an
+   equal-weighted market benchmark comparison, realized P&L / win-rate stats,
+   and a sector diversification breakdown. This is the primary learning
    mechanism.
 4. Comparison view — side-by-side stock stats for relative valuation thinking.
 
@@ -56,7 +60,11 @@ integration, no exchanges beyond US tech + PSX, no social/community features.
       commercial intent ever grows.
 - **Ingestion**: a scheduled job (Vercel Cron) is the _only_ caller of
   Finnhub/PSX — once or twice a day for US at market close, once a day for
-  PSX at their EOD publish time. Writes into a `price_snapshots` table.
+  PSX at their EOD publish time. Writes into a `price_snapshots` table. A
+  third daily cron runs after both price-ingestion jobs and snapshots every
+  portfolio's total value into `portfolio_value_snapshots`, for the
+  performance chart and benchmark comparison — it only re-reads that day's
+  already-ingested prices, it doesn't call any third-party API.
 - **Caching / rate limits**: solved structurally, not with a separate cache
   layer. The app always reads from Supabase; it never calls a third-party API
   on a user request. At 40-60 tickers on a daily cadence, both free tiers have
@@ -65,12 +73,20 @@ integration, no exchanges beyond US tech + PSX, no social/community features.
 ### Schema sketch
 
 - `tickers` (symbol, name, market, sector)
-- `price_snapshots` (ticker_id, date, price fields: close, volume, pe,
-  market_cap, 52w_high/low, source)
+- `price_snapshots` (ticker_id, date, price fields: close, previous_close,
+  volume, pe_ratio, market_cap, week52_high/low, dividend_yield, eps, source —
+  dividend_yield/eps are US-only, PSX's public endpoints don't expose
+  fundamentals)
 - `terms` (key, explainer text, related context tags) — inline education
   content
-- `portfolios`, `holdings`, `transactions` — paper-trading ledger; trades
-  execute at the last stored snapshot price, no matching engine
+- `portfolios` (per-user; two separate cash pools, `cash_balance_usd` and
+  `cash_balance_pkr`, no fake FX conversion between them), `holdings`,
+  `transactions` — paper-trading ledger; trades execute atomically via the
+  `execute_trade()` Postgres function at the last stored snapshot price, no
+  matching engine
+- `portfolio_value_snapshots` — daily cash + holdings value per portfolio per
+  currency, written by the third ingestion cron; backs the performance chart
+  and benchmark comparison
 
 ## Common commands
 

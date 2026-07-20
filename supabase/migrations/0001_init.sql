@@ -1,4 +1,4 @@
--- Sarmaya initial schema.
+-- Primer Stocks initial schema.
 -- Tables split into two trust tiers:
 --   1. Market data (tickers, price_snapshots, terms): world-readable,
 --      writable only by the service-role key (price ingestion cron).

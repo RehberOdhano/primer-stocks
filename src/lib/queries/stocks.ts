@@ -103,3 +103,64 @@ export async function getPriceHistory(
     .map((row) => ({ date: row.snapshot_date, close: row.close }))
     .reverse();
 }
+
+export interface MarketBenchmark {
+  /** Equal-weighted average return across every tracked ticker in the market. */
+  returnPercent: number;
+  /** Earliest snapshot date any tracked ticker in the market has — the comparison window's start. */
+  sinceDate: string;
+}
+
+/**
+ * "If you'd put an equal amount into every tracked stock in this market
+ * instead" — the simplest honest benchmark a paper-trading app can offer
+ * without a licensed index feed. Built from the same price_snapshots history
+ * already being collected, so it costs nothing extra to compute.
+ */
+export async function getMarketBenchmark(
+  market: Market,
+): Promise<MarketBenchmark | null> {
+  const supabase = await createClient();
+
+  const { data: tickers, error: tickersError } = await supabase
+    .from("tickers")
+    .select("id")
+    .eq("market", market);
+
+  if (tickersError) throw new Error(tickersError.message);
+  const tickerIds = (tickers ?? []).map((t) => t.id);
+  if (tickerIds.length === 0) return null;
+
+  const { data: snapshots, error } = await supabase
+    .from("price_snapshots")
+    .select("ticker_id, snapshot_date, close")
+    .in("ticker_id", tickerIds)
+    .order("snapshot_date", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  if (!snapshots || snapshots.length === 0) return null;
+
+  const firstByTicker = new Map<string, { date: string; close: number }>();
+  const lastByTicker = new Map<string, { date: string; close: number }>();
+  for (const row of snapshots) {
+    if (!firstByTicker.has(row.ticker_id)) {
+      firstByTicker.set(row.ticker_id, { date: row.snapshot_date, close: row.close });
+    }
+    // Ascending order, so the final write for each ticker is its latest close.
+    lastByTicker.set(row.ticker_id, { date: row.snapshot_date, close: row.close });
+  }
+
+  const returns: number[] = [];
+  let sinceDate: string | null = null;
+  for (const [tickerId, first] of firstByTicker) {
+    const last = lastByTicker.get(tickerId);
+    if (!last || first.close === 0) continue;
+    returns.push(((last.close - first.close) / first.close) * 100);
+    if (sinceDate == null || first.date < sinceDate) sinceDate = first.date;
+  }
+
+  if (returns.length === 0 || sinceDate == null) return null;
+
+  const returnPercent = returns.reduce((sum, r) => sum + r, 0) / returns.length;
+  return { returnPercent, sinceDate };
+}
